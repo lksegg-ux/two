@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>과목별 성취평가 운영 결과 분석 - 3단계(성취도 A,B,C)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>window.XLSX || document.write('\u003Cscript src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"\u003E\u003C/script\u003E');</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script>window.Chart || document.write('\u003Cscript src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"\u003E\u003C/script\u003E');</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script>window.saveAs || document.write('\u003Cscript src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"\u003E\u003C/script\u003E');</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script>window.ExcelJS || document.write('\u003Cscript src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"\u003E\u003C/script\u003E');</script>
+<style>
+:root{
+  --bg:#eef1f5;
+  --card:#ffffff;
+  --ink:#16233c;
+  --ink-soft:#5b6680;
+  --line:#dde2ea;
+  --accent:#1f6f5c;
+  --accent-dark:#154e41;
+  --accent-soft:#e4f2ee;
+  --warn:#b3441f;
+  --warn-soft:#fbe9e3;
+  --lvA:#1f6f5c;
+  --lvB:#3f8f74;
+  --lvC:#c9a227;
+  --lvD:#cf7a3c;
+  --lvE:#b3441f;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'Noto Sans KR',sans-serif;
+  line-height:1.55;
+  padding-bottom:80px;
+}
+h1,h2,h3{font-family:'Noto Serif KR',serif;margin:0;}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px;}
+.org-bar{
+  background:var(--accent-dark);color:#dff2eb;font-size:12px;font-weight:700;letter-spacing:.04em;padding:7px 0;
+}
+.org-bar .wrap{padding:0 20px;}
+header.top{
+  background:linear-gradient(135deg,var(--ink) 0%,#223655 60%,var(--accent-dark) 130%);
+  color:#f4f6f9;
+  padding:20px 0 18px;
+  border-bottom:4px solid var(--accent);
+}
+header.top h1{font-size:30px;font-weight:800;letter-spacing:-.01em;}
+header.top h1 .level-detail{font-size:.5em;font-weight:500;color:#9fd6c4;margin-left:10px;white-space:nowrap;}
+header.top p{margin:6px 0 0;color:#cdd6e6;font-size:13px;max-width:760px;}
+
+.toolbar{
+  background:rgba(238,241,245,.92);backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--line);
+  padding:10px 0;
+}
+.toolbar .wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.toolbar .status{font-size:12.5px;color:var(--ink-soft);margin-right:auto;}
+.toolbar .status b{color:var(--accent-dark);}
+
+button{
+  font-family:inherit;cursor:pointer;border:none;border-radius:8px;
+  padding:9px 16px;font-size:13.5px;font-weight:700;
+  transition:transform .08s ease,background .15s ease;
+}
+button:active{transform:scale(.97);}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:var(--accent-dark);}
+.btn-ghost{background:#fff;color:var(--ink);border:1px solid var(--line);}
+.btn-ghost:hover{background:#f3f5f8;}
+.btn-danger{background:#fff;color:var(--warn);border:1px solid #f0d3c8;}
+.btn-danger:hover{background:var(--warn-soft);}
+.btn-sm{padding:5px 10px;font-size:12px;border-radius:6px;}
+
+section.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:14px;
+  margin:26px 0;
+  padding:26px 28px 30px;
+  box-shadow:0 1px 2px rgba(22,35,60,.04);
+}
+/* 2열 배치: 1.반영비율/2.파일업로드 | 3.1차/4.2차 | 5.수행평가/6.학기말 (엑셀 일람표 레이아웃과 동일한 순서) */
+main.wrap{
+  max-width:1400px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:24px;
+  align-items:start;
+}
+main.wrap > section.card{ margin:0; min-width:0; }
+main.wrap > section.card#sec7{ grid-column:1 / -1; }
+@media (max-width:980px){
+  main.wrap{ grid-template-columns:1fr; }
+  main.wrap > section.card#sec7{ grid-column:auto; }
+}
+.sec-head{display:flex;align-items:baseline;gap:12px;margin-bottom:18px;border-bottom:1px solid var(--line);padding-bottom:14px;}
+.sec-num{
+  font-family:'Noto Serif KR',serif;font-weight:700;font-size:15px;color:#fff;
+  background:var(--ink);width:30px;height:30px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;flex:none;
+}
+.sec-head h2{font-size:19px;color:var(--ink);}
+.sec-head .sub{font-size:12.5px;color:var(--ink-soft);margin-left:auto;}
+
+.subhead{font-weight:700;font-size:14.5px;margin:22px 0 10px;color:var(--ink);}
+.subhead:first-of-type{margin-top:0;}
+.hint{font-size:12.5px;color:var(--ink-soft);margin:-2px 0 12px;}
+
+.grid-ratio{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.field{background:#fafbfc;border:1px solid var(--line);border-radius:10px;padding:12px 14px;}
+.field label{display:block;font-size:12.5px;color:var(--ink-soft);font-weight:700;margin-bottom:6px;}
+.field input[type=number],.field input[type=text]{
+  width:100%;border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:14.5px;
+  font-family:inherit;color:var(--ink);background:#fff;
+}
+.field input[readonly]{background:#f1f3f6;color:var(--ink-soft);}
+.field .unit{font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
+
+table.cutoff{width:100%;min-width:420px;border-collapse:collapse;margin-top:6px;}
+table.cutoff th,table.cutoff td{border:1px solid var(--line);padding:8px 6px;text-align:center;font-size:13.5px;}
+table.cutoff th:last-child,table.cutoff td:last-child{white-space:nowrap;width:1%;}
+table.cutoff th{background:#f5f7f9;color:var(--ink-soft);font-weight:700;}
+table.cutoff td:first-child{background:#f5f7f9;font-weight:700;text-align:left;padding-left:12px;color:var(--ink);white-space:nowrap;}
+table.cutoff input{width:90px;border:1px solid var(--line);border-radius:6px;padding:6px;text-align:center;font-size:13.5px;font-family:inherit;}
+table.cutoff input:focus{outline:2px solid var(--accent);outline-offset:1px;}
+.paste-hint{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--accent-dark);background:var(--accent-soft);padding:4px 10px;border-radius:20px;margin-bottom:10px;}
+
+.upload-block{border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:16px;background:#fcfcfd;}
+.upload-block h3{font-size:14.5px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.upload-block h3 .tag{
+  font-family:'Noto Sans KR';font-size:11px;background:var(--ink);color:#fff;border-radius:5px;padding:2px 7px;font-weight:700;
+}
+.howto{
+  background:#f5f7f9;border:1px dashed var(--line);border-radius:8px;padding:10px 12px;
+  font-size:12.5px;color:var(--ink-soft);margin:10px 0 14px;
+}
+.howto b{color:var(--ink);}
+.filerow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+input[type=file]{
+  font-size:13px;font-family:inherit;border:1px solid var(--line);border-radius:8px;padding:7px;background:#fff;max-width:340px;
+}
+.file-list{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
+.file-item{
+  border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:#fff;
+}
+.file-item .row1{display:flex;align-items:center;gap:10px;}
+.file-item .fname{font-weight:700;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.badge{font-size:11px;padding:2px 8px;border-radius:20px;background:var(--accent-soft);color:var(--accent-dark);font-weight:700;white-space:nowrap;display:inline-block;}
+.badge.warn{background:var(--warn-soft);color:var(--warn);}
+.map-toggle{font-size:11.5px;color:var(--accent-dark);background:none;border:none;text-decoration:underline;padding:0;font-weight:700;}
+.map-panel{display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);}
+.map-panel.open{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+.detail-panel{display:none;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:12px;color:var(--ink-soft);line-height:1.6;}
+.detail-panel.open{display:block;}
+.map-panel label{display:block;font-size:11px;color:var(--ink-soft);margin-bottom:3px;}
+.map-panel select{width:100%;font-size:12px;padding:5px;border-radius:6px;border:1px solid var(--line);font-family:inherit;}
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.stat-box{background:#f7f8fa;border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center;}
+.stat-box .lbl{font-size:11.5px;color:var(--ink-soft);font-weight:700;}
+.stat-box .val{font-size:22px;font-weight:700;color:var(--ink);font-family:'Noto Serif KR',serif;margin-top:4px;}
+.stat-box .val small{font-size:13px;color:var(--ink-soft);}
+.empty-note{font-size:13px;color:var(--ink-soft);background:#f7f8fa;border:1px dashed var(--line);border-radius:10px;padding:18px;text-align:center;}
+
+.hist-wrap{margin-bottom:8px;}
+.hist-ctrl{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.hist-ctrl label{font-size:12.5px;color:var(--ink-soft);font-weight:700;}
+.hist-ctrl input[type=number]{width:62px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;font-family:inherit;}
+.chart-box{height:260px;}
+
+table.levels{width:100%;border-collapse:collapse;margin-top:10px;font-size:13.5px;}
+table.levels th,table.levels td{border:1px solid var(--line);padding:9px 6px;text-align:center;}
+table.levels th{background:#f5f7f9;color:var(--ink-soft);font-weight:700;}
+table.levels td.rangecell{font-size:12px;color:var(--ink-soft);}
+table.levels td.first{font-weight:700;text-align:left;padding-left:12px;background:#f9fafb;color:var(--ink);}
+table.levels .lvA{color:var(--lvA);font-weight:700;}
+table.levels .lvB{color:var(--lvB);font-weight:700;}
+table.levels .lvC{color:var(--lvC);font-weight:700;}
+table.levels .lvD{color:var(--lvD);font-weight:700;}
+table.levels .lvE{color:var(--lvE);font-weight:700;}
+
+.warn-box{font-size:12.5px;color:var(--warn);background:var(--warn-soft);border-radius:8px;padding:9px 12px;margin-top:10px;}
+.save-actions{display:flex;gap:12px;flex-wrap:wrap;}
+.save-actions button{padding:13px 22px;font-size:14.5px;}
+footer{text-align:center;font-size:12px;color:var(--ink-soft);padding:30px 0 10px;}
+@media(max-width:760px){
+  .grid-ratio{grid-template-columns:1fr;}
+  .stats-row{grid-template-columns:repeat(2,1fr);}
+  .map-panel.open{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <h1>3단계<span class="level-detail">(성취도 A,B,C)</span></h1>
+    <p>반영비율과 분할점수를 입력하고 NEIS에서 내려받은 자료를 업로드하면, 평가별 분포와 성취수준별 인원·비율을 자동으로 계산합니다. 입력값은 브라우저에 자동 저장되어 다음에 열 때 기본값으로 불러옵니다.</p>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="wrap">
+    <span class="status" id="saveStatus">입력값을 작성하면 자동으로 저장됩니다.</span>
+    <button class="btn-ghost" id="btnReset">기본값 초기화</button>
+    <button class="btn-primary" id="btnExportExcel">엑셀로 결과 저장</button>
+  </div>
+</div>
+
+<main class="wrap">
+
+  <!-- SECTION 1 -->
+  <section class="card" id="sec1">
+    <div class="sec-head"><div class="sec-num">1</div><h2>반영비율, 분할점수 입력</h2></div>
+
+    <div class="subhead">과목 정보</div>
+    <p class="hint">엑셀로 결과를 저장할 때 파일 맨 위 제목에 표시됩니다. (예: 2026학년도 1학기 공통수학1 성취평가 운영결과)</p>
+    <div class="grid-ratio">
+      <div class="field">
+        <label>학년도</label>
+        <input type="text" id="metaYear" inputmode="numeric" placeholder="예: 2026">
+      </div>
+      <div class="field">
+        <label>학기</label>
+        <input type="text" id="metaSemester" inputmode="numeric" placeholder="예: 1">
+      </div>
+      <div class="field">
+        <label>과목명</label>
+        <input type="text" id="metaSubject" placeholder="예: 공통수학1">
+      </div>
+    </div>
+
+    <div class="subhead">가. 반영비율</div>
+    <p class="hint">1차·2차 정기시험 반영 비율을 입력하면 수행평가 반영 비율은 자동으로 계산됩니다(1 − (1차+2차)).</p>
+    <div class="grid-ratio">
+      <div class="field">
+        <label>1차 정기시험 반영비율</label>
+        <input type="number" id="r1" step="0.01" min="0" max="1" placeholder="예: 0.4">
+        <div class="unit">0~1 사이 소수로 입력 (예: 40% → 0.4)</div>
+      </div>
+      <div class="field">
+        <label>2차 정기시험 반영비율</label>
+        <input type="number" id="r2" step="0.01" min="0" max="1" placeholder="예: 0.4">
+        <div class="unit">0~1 사이 소수로 입력 (예: 40% → 0.4)</div>
+      </div>
+      <div class="field">
+        <label>수행평가 반영비율 (자동계산)</label>
+        <input type="text" id="r3" readonly value="-">
+        <div class="unit">1 − (1차 + 2차)</div>
+      </div>
+    </div>
+    <div id="ratioWarn"></div>
+
+    <div class="subhead">나. 정기시험·수행평가·학기말 성취수준별 분할점수 입력</div>
+    <p class="hint">각 평가의 A/B, B/C 분할점수를 입력하세요. 첫 칸을 클릭한 뒤 엑셀에서 점수를 복사해 붙여넣기(Ctrl+V) 하면 표 전체가 한 번에 채워집니다.</p>
+    <span class="paste-hint">💡 예) 1차 정기시험행 첫 칸에 78.31&nbsp;&nbsp;51.08 를 그대로 붙여넣기 가능</span>
+    <div style="overflow-x:auto;">
+    <table class="cutoff">
+      <thead><tr><th style="text-align:left;padding-left:12px;">평가</th><th>A/B</th><th>B/C</th><th>입력상태</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>1차 정기시험</td>
+          <td><input class="cut" data-test="t1" data-col="0" placeholder="80"></td>
+          <td><input class="cut" data-test="t1" data-col="1" placeholder="60"></td>
+          <td><span class="badge" id="cutstat_t1">미입력</span></td>
+        </tr>
+        <tr>
+          <td>2차 정기시험</td>
+          <td><input class="cut" data-test="t2" data-col="0" placeholder="80"></td>
+          <td><input class="cut" data-test="t2" data-col="1" placeholder="60"></td>
+          <td><span class="badge" id="cutstat_t2">미입력</span></td>
+        </tr>
+        <tr>
+          <td>수행평가</td>
+          <td><input class="cut" data-test="perf" data-col="0" placeholder="48"></td>
+          <td><input class="cut" data-test="perf" data-col="1" placeholder="36"></td>
+          <td><span class="badge" id="cutstat_perf">미입력</span></td>
+        </tr>
+        <tr>
+          <td>학기말</td>
+          <td><input class="cut" data-test="final" data-col="0" placeholder="80"></td>
+          <td><input class="cut" data-test="final" data-col="1" placeholder="60"></td>
+          <td><span class="badge" id="cutstat_final">미입력</span></td>
+        </tr>
+
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- SECTION 2 -->
+  <section class="card" id="sec2">
+    <div class="sec-head"><div class="sec-num">2</div><h2>파일업로드</h2></div>
+
+    <div class="upload-block">
+      <h3><span class="tag">가</span> 1차 정기시험 파일업로드</h3>
+      <div class="howto"><b>조회방법</b> : 정기시험조회 › 교과목별일람표조회-전체학급 › 1차정기시험조회 후 XLS data 저장</div>
+      <div class="filerow">
+        <input type="file" id="file_t1" accept=".xls,.xlsx,.csv">
+        <span id="status_t1" class="badge">업로드된 파일 없음</span>
+      </div>
+      <div class="file-list" id="list_t1"></div>
+    </div>
+
+    <div class="upload-block">
+      <h3><span class="tag">나</span> 2차 정기시험 파일업로드</h3>
+      <div class="howto"><b>조회방법</b> : 정기시험조회 › 교과목별일람표조회-전체학급 › 2차정기시험조회 후 XLS data 저장</div>
+      <div class="filerow">
+        <input type="file" id="file_t2" accept=".xls,.xlsx,.csv">
+        <span id="status_t2" class="badge">업로드된 파일 없음</span>
+      </div>
+      <div class="file-list" id="list_t2"></div>
+    </div>
+
+    <div class="upload-block">
+      <h3><span class="tag">다</span> 수행평가 파일업로드 (영역별, 모든 영역 업로드)</h3>
+      <div class="howto"><b>조회방법</b> : 수행평가조회 › 교과목별일람표조회-전체학급-영역별조회 후 XLS data 저장 (모든 영역 업로드)</div>
+      <p class="hint">영역별 파일을 모두 선택하세요(2~4개). 학년·반·번호가 일치하는 학생끼리 점수를 합산하여 수행평가 전체 점수를 계산합니다.</p>
+      <div class="filerow">
+        <input type="file" id="file_perf" accept=".xls,.xlsx,.csv" multiple>
+        <span id="status_perf" class="badge">업로드된 영역 없음</span>
+      </div>
+      <div class="file-list" id="list_perf"></div>
+    </div>
+
+    <div class="upload-block">
+      <h3><span class="tag">라</span> 학기말성적 파일업로드 (전체 학급, 8개반)</h3>
+      <div class="howto"><b>조회방법</b> : 학기말성적조회 › 성적일람표 › 산출기준: 학기말, 받은점수기준조회 › XLS data 저장</div>
+      <p class="hint">반별 파일을 모두 업로드하세요. <b>원점수</b> 열을 기준으로 전체 학생의 점수를 집계합니다.</p>
+      <div class="filerow">
+        <input type="file" id="file_final" accept=".xls,.xlsx,.csv" multiple>
+        <span id="status_final" class="badge">업로드된 학급 없음</span>
+      </div>
+      <div class="file-list" id="list_final"></div>
+    </div>
+  </section>
+
+  <!-- SECTION 3 -->
+  <section class="card" id="sec3">
+    <div class="sec-head"><div class="sec-num">3</div><h2>1차 정기시험 결과</h2><span class="sub">가. 평가 결과 개요 및 분포 / 나. 성취수준별 분포 분석</span></div>
+    <div id="result_t1"></div>
+  </section>
+
+  <!-- SECTION 4 -->
+  <section class="card" id="sec4">
+    <div class="sec-head"><div class="sec-num">4</div><h2>2차 정기시험 결과</h2><span class="sub">가. 평가 결과 개요 및 분포 / 나. 성취수준별 분포 분석</span></div>
+    <div id="result_t2"></div>
+  </section>
+
+  <!-- SECTION 5 -->
+  <section class="card" id="sec5">
+    <div class="sec-head"><div class="sec-num">5</div><h2>수행평가 결과</h2><span class="sub">가. 평가 결과 개요 및 분포 / 나. 성취수준별 분포 분석</span></div>
+    <div id="result_perf"></div>
+  </section>
+
+  <!-- SECTION 6 -->
+  <section class="card" id="sec6">
+    <div class="sec-head"><div class="sec-num">6</div><h2>학기말 결과</h2><span class="sub">가. 평가 결과 개요 및 분포 / 나. 성취수준별 분포 분석</span></div>
+    <div id="result_final"></div>
+  </section>
+
+  <!-- SECTION 7 -->
+  <section class="card" id="sec7">
+    <div class="sec-head"><div class="sec-num">7</div><h2>결과 저장</h2></div>
+    <p class="hint">지금까지 계산된 모든 결과(반영비율, 분할점수, 평가별 통계·히스토그램·성취수준 분포)를 파일로 내려받아 보관할 수 있습니다.</p>
+    <div class="save-actions">
+      <button class="btn-primary" id="btnExportExcel2">엑셀(.xlsx)로 저장</button>
+    </div>
+  </section>
+
+</main>
+
+<footer>입력한 반영비율·분할점수는 이 브라우저에 자동 저장되며, 다음에 열 때 기본값으로 표시됩니다. 업로드한 파일 자체는 저장되지 않습니다(매번 다시 업로드 필요).</footer>
+
+<script>
+(function(){
+"use strict";
+
+const STORAGE_KEY = 'achv_webapp_defaults_v1';
+const TESTS = [
+  {key:'t1', label:'1차 정기시험'},
+  {key:'t2', label:'2차 정기시험'},
+  {key:'perf', label:'수행평가'},
+  {key:'final', label:'학기말'}
+];
+
+const state = {
+  cutoffs:{t1:[null,null], t2:[null,null], perf:[null,null], final:[null,null]},
+  binWidth:{t1:5, t2:5, perf:5, final:5},
+  datasets:{
+    t1:{file:null, scores:[]},
+    t2:{file:null, scores:[]},
+    perf:{files:[]},
+    final:{files:[]}
+  }
+};
+const charts = {t1:null, t2:null, perf:null, final:null};
+
+/* ---------------- utils ---------------- */
+function fmtNum(n, d){
+  if(n===null||n===undefined||isNaN(n)) return '-';
+  d = d===undefined?2:d;
+  const r = Math.round(n*Math.pow(10,d))/Math.pow(10,d);
+  return r.toString();
+}
+function trimStr(v){ return (v===undefined||v===null) ? '' : String(v).trim(); }
+function todayStr(){
+  const d=new Date();
+  return d.getFullYear()+''+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+}
+
+/* ---------------- localStorage defaults ---------------- */
+function collectInputState(){
+  return {
+    meta:{ year: document.getElementById('metaYear').value, semester: document.getElementById('metaSemester').value, subject: document.getElementById('metaSubject').value },
+    ratios:{ r1: document.getElementById('r1').value, r2: document.getElementById('r2').value },
+    cutoffs: JSON.parse(JSON.stringify(getCutoffsFromInputs())),
+    binWidth: Object.assign({}, state.binWidth)
+  };
+}
+function saveDefaults(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(collectInputState()));
+    document.getElementById('saveStatus').innerHTML = '입력값이 <b>자동 저장</b>되었습니다. (' + new Date().toLocaleTimeString('ko-KR') + ')';
+  }catch(e){}
+}
+function loadDefaults(){
+  let raw;
+  try{ raw = localStorage.getItem(STORAGE_KEY); }catch(e){ raw = null; }
+  if(!raw) return;
+  let data;
+  try{ data = JSON.parse(raw); }catch(e){ return; }
+  if(data.meta){
+    if(data.meta.year!=='' && data.meta.year!==undefined) document.getElementById('metaYear').value = data.meta.year;
+    if(data.meta.semester!=='' && data.meta.semester!==undefined) document.getElementById('metaSemester').value = data.meta.semester;
+    if(data.meta.subject!=='' && data.meta.subject!==undefined) document.getElementById('metaSubject').value = data.meta.subject;
+  }
+  if(data.ratios){
+    if(data.ratios.r1!=='' && data.ratios.r1!==undefined) document.getElementById('r1').value = data.ratios.r1;
+    if(data.ratios.r2!=='' && data.ratios.r2!==undefined) document.getElementById('r2').value = data.ratios.r2;
+  }
+  if(data.cutoffs){
+    TESTS.forEach(function(t){
+      const arr = data.cutoffs[t.key];
+      if(!arr) return;
+      arr.forEach(function(v,i){
+        if(v===null||v===undefined||v==='') return;
+        const input = document.querySelector('.cut[data-test="'+t.key+'"][data-col="'+i+'"]');
+        if(input) input.value = v;
+      });
+    });
+  }
+  if(data.binWidth){ Object.assign(state.binWidth, data.binWidth); }
+  document.getElementById('saveStatus').innerHTML = '이전에 저장된 <b>기본값</b>을 불러왔습니다.';
+}
+function buildReportTitle(){
+  const year = trimStr(document.getElementById('metaYear').value);
+  const sem = trimStr(document.getElementById('metaSemester').value);
+  const subject = trimStr(document.getElementById('metaSubject').value);
+  const parts = [];
+  if(year) parts.push(year+'학년도');
+  if(sem) parts.push(sem+'학기');
+  if(subject) parts.push(subject);
+  parts.push('성취평가 운영결과');
+  return parts.join(' ');
+}
+function buildFileName(){
+  const year = trimStr(document.getElementById('metaYear').value);
+  const sem = trimStr(document.getElementById('metaSemester').value);
+  const subject = trimStr(document.getElementById('metaSubject').value);
+  const parts = [];
+  if(year) parts.push(year+'학년도');
+  if(sem) parts.push(sem+'학기');
+  if(subject) parts.push(subject);
+  const label = parts.length ? parts.join(' ') : todayStr();
+  return ('성취평가운영결과_'+label).replace(/[\\/:*?"<>|]/g,'_') + '.xlsx';
+}
+function resetDefaults(){
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  document.getElementById('metaYear').value='';
+  document.getElementById('metaSemester').value='';
+  document.getElementById('metaSubject').value='';
+  document.getElementById('r1').value='';
+  document.getElementById('r2').value='';
+  document.querySelectorAll('.cut').forEach(function(i){ i.value=''; });
+  updateRatioAuto();
+  TESTS.forEach(function(t){ state.cutoffs[t.key]=[null,null,null,null]; refreshSection(t.key); });
+  refreshCutoffStatus();
+  document.getElementById('saveStatus').textContent = '기본값이 초기화되었습니다.';
+}
+
+/* ---------------- ratio ---------------- */
+function updateRatioAuto(){
+  const r1 = parseFloat(document.getElementById('r1').value);
+  const r2 = parseFloat(document.getElementById('r2').value);
+  const warnEl = document.getElementById('ratioWarn');
+  const r3field = document.getElementById('r3');
+  if(isNaN(r1) || isNaN(r2)){
+    r3field.value = '-';
+    warnEl.innerHTML = '';
+    return;
+  }
+  const r3 = 1 - (r1+r2);
+  r3field.value = fmtNum(r3,2);
+  if(r3 < 0 || r3 > 1){
+    warnEl.innerHTML = '<div class="warn-box">1차+2차 반영비율의 합이 1을 넘습니다. 값을 확인해주세요.</div>';
+  } else {
+    warnEl.innerHTML = '';
+  }
+}
+
+/* ---------------- cutoff grid (incl. paste) ---------------- */
+function parseNumLenient(raw){
+  let s = trimStr(raw);
+  if(s==='') return NaN;
+  // 전각(full-width) 숫자/기호를 반각으로 변환 (한글 IME 전각 입력 대비)
+  s = s.replace(/[\uFF10-\uFF19]/g, function(ch){ return String.fromCharCode(ch.charCodeAt(0)-0xFEE0); });
+  s = s.replace(/\uFF0E/g,'.').replace(/\uFF0D/g,'-');
+  s = s.replace(/,/g,''); // 천단위 구분 콤마 제거
+  s = s.replace(/[점%\s]/g,''); // '점', '%', 공백 등 단위 제거
+  if(s==='') return NaN;
+  const v = parseFloat(s);
+  return v;
+}
+function getCutoffsFromInputs(){
+  const out = {};
+  TESTS.forEach(function(t){
+    out[t.key] = [0,1].map(function(c){
+      const el = document.querySelector('.cut[data-test="'+t.key+'"][data-col="'+c+'"]');
+      const v = parseNumLenient(el.value);
+      return isNaN(v) ? null : v;
+    });
+  });
+  return out;
+}
+function setupCutoffGrid(){
+  document.querySelectorAll('.cut').forEach(function(input){
+    input.addEventListener('input', onCutoffChanged);
+    input.addEventListener('paste', function(e){
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      if(!text || text.indexOf('\t')===-1 && text.indexOf('\n')===-1){ return; } // let default paste happen for a single value
+      e.preventDefault();
+      const test = input.getAttribute('data-test');
+      const startCol = parseInt(input.getAttribute('data-col'),10);
+      const rows = text.replace(/\r/g,'').split('\n').filter(function(r){return r.length>0;});
+      const testOrder = TESTS.map(function(t){return t.key;});
+      let testIdx = testOrder.indexOf(test);
+      rows.forEach(function(rowText, rOffset){
+        const cells = rowText.split('\t');
+        const curTest = testOrder[testIdx + rOffset];
+        if(!curTest) return;
+        cells.forEach(function(cellVal, cOffset){
+          const col = startCol + cOffset;
+          if(col>1) return;
+          const target = document.querySelector('.cut[data-test="'+curTest+'"][data-col="'+col+'"]');
+          if(target) target.value = cellVal.trim();
+        });
+      });
+      onCutoffChanged();
+    });
+  });
+}
+function onCutoffChanged(){
+  const cuts = getCutoffsFromInputs();
+  Object.assign(state.cutoffs, cuts);
+  TESTS.forEach(function(t){ refreshSection(t.key); });
+  refreshCutoffStatus();
+  saveDefaults();
+}
+function refreshCutoffStatus(){
+  TESTS.forEach(function(t){
+    const el = document.getElementById('cutstat_'+t.key);
+    if(!el) return;
+    const arr = state.cutoffs[t.key] || [null,null];
+    const filledCount = arr.filter(function(v){ return typeof v==='number' && !isNaN(v); }).length;
+    el.classList.remove('warn');
+    if(filledCount===0){
+      el.textContent = '미입력';
+    } else if(filledCount<2){
+      el.textContent = filledCount+'/2 입력됨';
+      el.classList.add('warn');
+    } else {
+      const ordered = arr[0]>arr[1];
+      if(!ordered){
+        el.textContent = '순서 확인 필요';
+        el.classList.add('warn');
+      } else {
+        el.textContent = '입력 완료';
+      }
+    }
+  });
+}
+
+/* ---------------- excel/html parsing ---------------- */
+const KEYMAP = {
+  name:['성명','이름'],
+  grade:['학년'],
+  score:['원점수','점수','득점']
+};
+function readFileAsAOA(file){
+  return new Promise(function(resolve,reject){
+    const reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, {type:'array', cellText:true});
+        let bestSheet=null, bestLen=-1;
+        wb.SheetNames.forEach(function(name){
+          const ws = wb.Sheets[name];
+          const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false});
+          if(aoa.length > bestLen){ bestLen = aoa.length; bestSheet = aoa; }
+        });
+        resolve(bestSheet || []);
+      }catch(err){ reject(err); }
+    };
+    reader.onerror = function(){ reject(new Error('파일을 읽을 수 없습니다.')); };
+    reader.readAsArrayBuffer(file);
+  });
+}
+function findHeaderRowIndex(aoa){
+  let best=-1, bestScore=0;
+  const limit = Math.min(aoa.length, 25);
+  for(let r=0; r<limit; r++){
+    const row = aoa[r] || [];
+    let score=0;
+    row.forEach(function(cellRaw){
+      const cell = trimStr(cellRaw);
+      if(!cell) return;
+      // 표 제목 등 긴 문장 셀(예: "OOO 성적 일람표 (받은점수기준)")에 우연히 '점수' 등의
+      // 글자가 포함되어 헤더 행으로 오인식되는 것을 방지: 짧은 열 이름 셀만 신호로 인정
+      if(cell.length>14) return;
+      if(cell.indexOf('성명')>=0 || cell.indexOf('이름')>=0) score+=2;
+      if(cell.replace(/\s/g,'')==='번호') score+=2;
+      if(cell.indexOf('학년')>=0) score+=1;
+      if(cell.replace(/\s/g,'')==='반') score+=1;
+      if(cell.indexOf('원점수')>=0) score+=3;
+      else if(cell.indexOf('점수')>=0) score+=2;
+    });
+    if(score>bestScore){ bestScore=score; best=r; }
+  }
+  return bestScore>=2 ? best : -1;
+}
+function detectCol(headers, keywords, exclude){
+  exclude = exclude || [];
+  for(let i=0;i<headers.length;i++){
+    const h = headers[i];
+    if(!h) continue;
+    if(exclude.some(function(ex){ return h.indexOf(ex)>=0; })) continue;
+    if(keywords.some(function(k){ return h.indexOf(k)>=0; })) return i;
+  }
+  return -1;
+}
+function detectExactCol(headers, exact){
+  for(let i=0;i<headers.length;i++){
+    if(headers[i].replace(/\s/g,'')===exact) return i;
+  }
+  return -1;
+}
+function guessMapping(headers){
+  return {
+    name: detectCol(headers, KEYMAP.name),
+    grade: detectCol(headers, KEYMAP.grade),
+    classNo: detectExactCol(headers,'반'),
+    studentNo: detectExactCol(headers,'번호'),
+    score: detectCol(headers, ['원점수']) >=0 ? detectCol(headers,['원점수']) : detectCol(headers, ['점수','득점'], ['환산'])
+  };
+}
+const FOOTER_ROW_KEYWORDS = ['수강자최고점','수강자최저점','수강자평균','강의실평균','과목평균','학급평균','전체평균','성취도별','응시생수','수강자수','석차평균','최고점','최저점','비고'];
+function isFooterRow(row){
+  return row.some(function(c){
+    const cell = trimStr(c).replace(/\s/g,'');
+    if(!cell) return false;
+    return FOOTER_ROW_KEYWORDS.some(function(k){ return cell.indexOf(k)>=0; });
+  });
+}
+function extractRows(aoa, headerIdx, headers, mapping){
+  const out = [];
+  for(let r=headerIdx+1; r<aoa.length; r++){
+    const row = aoa[r] || [];
+    if(row.every(function(c){ return trimStr(c)===''; })) continue;
+    if(isFooterRow(row)) continue;
+    const nameVal = mapping.name>=0 ? trimStr(row[mapping.name]) : '';
+    if(mapping.name>=0 && nameVal==='') continue;
+    if(mapping.score<0) continue;
+    const rawScore = row[mapping.score];
+    const score = parseFloat(trimStr(rawScore).replace(/,/g,''));
+    if(isNaN(score)) continue;
+    if(score<0 || score>100) continue;
+    const gradeVal = mapping.grade>=0 ? trimStr(row[mapping.grade]) : '';
+    const classVal = mapping.classNo>=0 ? trimStr(row[mapping.classNo]) : '';
+    const noVal = mapping.studentNo>=0 ? trimStr(row[mapping.studentNo]) : '';
+    let key = [gradeVal,classVal,noVal].filter(function(v){return v!=='';}).join('-');
+    if(!key) key = nameVal || ('row'+r);
+    out.push({name:nameVal, key:key, score:score});
+  }
+  return out;
+}
+/* ---------------- matrix(반별 일람표) format detection/parsing ---------------- */
+/* NEIS "지필평가 교과목별 일람표(전체학급)" 형식: 첫 열 머리글이 '반번호', 그 옆으로 반(1,2,3...) 열이
+   이어지고, 각 데이터 행은 번호(1,2,3...)별 학생의 반별 점수가 나열된 매트릭스 형태이다.
+   예) 반번호 | 1 | 2 | 3 | ...
+        1     |76.6|32.0|34.6|...
+   '전출','결시' 등 텍스트나 빈칸은 해당 학생의 결측치로 보고 집계에서 제외한다. */
+function findMatrixHeaderIndex(aoa){
+  const limit = Math.min(aoa.length, 30);
+  for(let r=0; r<limit; r++){
+    const row = aoa[r] || [];
+    const first = trimStr(row[0]).replace(/\s/g,'');
+    if(first==='반번호') return r;
+  }
+  return -1;
+}
+function parseMatrixSheet(aoa, headerIdx){
+  const header = aoa[headerIdx] || [];
+  const classCols = [];
+  for(let c=1; c<header.length; c++){
+    const v = trimStr(header[c]);
+    if(v==='') continue;
+    const n = parseInt(v,10);
+    if(!isNaN(n)) classCols.push({col:c, classNo:n});
+  }
+  const rows = [];
+  for(let r=headerIdx+1; r<aoa.length; r++){
+    const row = aoa[r] || [];
+    const firstCell = trimStr(row[0]);
+    const studentNo = parseInt(firstCell,10);
+    if(firstCell==='' || isNaN(studentNo)) break; // 응시생수/총점/평균 등 합계행 또는 빈 행에서 종료
+    classCols.forEach(function(cc){
+      const cellStr = trimStr(row[cc.col]);
+      if(cellStr==='') return; // 빈칸: 결측(전출 등)
+      const score = parseFloat(cellStr.replace(/,/g,''));
+      if(isNaN(score)) return; // '전출','결시' 등 텍스트는 제외
+      if(score<0 || score>100) return;
+      rows.push({name:'', key:cc.classNo+'-'+studentNo, score:score, classNo:cc.classNo, studentNo:studentNo});
+    });
+  }
+  let exam='', subject='', maxScore=null;
+  for(let i=0; i<headerIdx; i++){
+    const row = aoa[i] || [];
+    row.forEach(function(cellRaw){
+      const cell = trimStr(cellRaw);
+      let m = cell.match(/고사\s*[:：]\s*(.+?)\s{2,}교과목/);
+      if(m) exam = m[1].trim();
+      m = cell.match(/교과목\s*[:：]\s*(.+?)\s{2,}만점/);
+      if(m) subject = m[1].trim();
+      m = cell.match(/만점\s*[:：]\s*([\d.]+)/);
+      if(m){ const v = parseFloat(m[1]); if(!isNaN(v)) maxScore = v; }
+    });
+  }
+  return {rows:rows, classCols:classCols.map(function(cc){return cc.classNo;}), exam:exam, subject:subject, maxScore:maxScore};
+}
+function buildMappingPanelHTML(uid, headers, mapping){
+  function opts(selectedIdx){
+    let html = '<option value="-1">(사용 안함)</option>';
+    headers.forEach(function(h,i){
+      html += '<option value="'+i+'"'+(i===selectedIdx?' selected':'')+'>'+(h||'(빈 칸 '+i+')')+'</option>';
+    });
+    return html;
+  }
+  return ''
+    + '<div><label>성명 열</label><select data-uid="'+uid+'" data-field="name">'+opts(mapping.name)+'</select></div>'
+    + '<div><label>학년 열</label><select data-uid="'+uid+'" data-field="grade">'+opts(mapping.grade)+'</select></div>'
+    + '<div><label>반 열</label><select data-uid="'+uid+'" data-field="classNo">'+opts(mapping.classNo)+'</select></div>'
+    + '<div><label>번호 열</label><select data-uid="'+uid+'" data-field="studentNo">'+opts(mapping.studentNo)+'</select></div>'
+    + '<div><label>점수(원점수) 열</label><select data-uid="'+uid+'" data-field="score">'+opts(mapping.score)+'</select></div>';
+}
+
+/* ---------------- single-file uploads (t1 / t2) ---------------- */
+function setupSingleUpload(key, statusElId, listElId){
+  const fileInput = document.getElementById('file_'+key);
+  fileInput.addEventListener('change', function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    readFileAsAOA(file).then(function(aoa){
+      // 1) 반별 매트릭스 일람표(교과목별 일람표-전체학급) 형식 우선 시도
+      const matrixIdx = findMatrixHeaderIndex(aoa);
+      if(matrixIdx>=0){
+        const mat = parseMatrixSheet(aoa, matrixIdx);
+        if(mat.rows.length){
+          state.datasets[key] = {
+            file:{name:file.name, format:'matrix', classCols:mat.classCols, exam:mat.exam, subject:mat.subject, maxScore:mat.maxScore, rows:mat.rows},
+            scores: mat.rows.map(function(r){return r.score;})
+          };
+          renderSingleFileList(key, listElId);
+          const st = document.getElementById(statusElId);
+          st.textContent = mat.rows.length+'명 인식됨 ('+mat.classCols.length+'개 반)';
+          st.className = 'badge';
+          refreshSection(key);
+          return;
+        }
+      }
+      // 2) 학생별 1행(성명/번호/원점수 등 열) 형식
+      const headerIdx = findHeaderRowIndex(aoa);
+      if(headerIdx<0){
+        document.getElementById(statusElId).textContent = '표 형식을 인식하지 못했습니다';
+        document.getElementById(statusElId).className='badge warn';
+        return;
+      }
+      const headers = (aoa[headerIdx]||[]).map(trimStr);
+      const mapping = guessMapping(headers);
+      const rows = extractRows(aoa, headerIdx, headers, mapping);
+      state.datasets[key] = {file:{name:file.name, format:'flat', aoa:aoa, headerIdx:headerIdx, headers:headers, mapping:mapping}, scores: rows.map(function(r){return r.score;})};
+      renderSingleFileList(key, listElId);
+      const st = document.getElementById(statusElId);
+      st.textContent = rows.length + '명 인식됨';
+      st.className = 'badge' + (mapping.score<0 ? ' warn' : '');
+      refreshSection(key);
+    }).catch(function(err){
+      const st = document.getElementById(statusElId);
+      st.textContent = '읽기 오류: '+err.message;
+      st.className='badge warn';
+    });
+  });
+}
+function renderSingleFileList(key, listElId){
+  const ds = state.datasets[key].file;
+  const el = document.getElementById(listElId);
+  if(!ds){ el.innerHTML=''; return; }
+  const uid = key+'_0';
+  if(ds.format==='matrix'){
+    const countsByClass = {};
+    ds.rows.forEach(function(r){ countsByClass[r.classNo] = (countsByClass[r.classNo]||0)+1; });
+    const classSummary = ds.classCols.map(function(c){ return c+'반 '+(countsByClass[c]||0)+'명'; }).join(' · ');
+    const metaLine = [ds.exam, ds.subject].filter(Boolean).join(' · ');
+    el.innerHTML = ''
+      + '<div class="file-item">'
+      + '<div class="row1"><span class="fname">'+ds.name+'</span>'
+      + '<span class="badge">'+state.datasets[key].scores.length+'명</span>'
+      + '<button class="map-toggle" data-toggle="'+uid+'">반별 인원 보기</button></div>'
+      + '<div class="detail-panel" id="panel_'+uid+'">'
+      + (metaLine ? metaLine+'<br>' : '') + classSummary
+      + '</div>'
+      + '</div>';
+    wireToggle(uid);
+    return;
+  }
+  el.innerHTML = ''
+    + '<div class="file-item">'
+    + '<div class="row1"><span class="fname">'+ds.name+'</span>'
+    + '<span class="badge">'+state.datasets[key].scores.length+'명</span>'
+    + '<button class="map-toggle" data-toggle="'+uid+'">열 매핑 확인/수정</button></div>'
+    + '<div class="map-panel" id="panel_'+uid+'">'+buildMappingPanelHTML(uid, ds.headers, ds.mapping)+'</div>'
+    + '</div>';
+  wireMapPanel(uid, function(field, val){
+    ds.mapping[field] = val;
+    const rows = extractRows(ds.aoa, ds.headerIdx, ds.headers, ds.mapping);
+    state.datasets[key].scores = rows.map(function(r){return r.score;});
+    document.getElementById('status_'+key).textContent = rows.length+'명 인식됨';
+    refreshSection(key);
+  });
+  wireToggle(uid);
+}
+
+/* ---------------- multi-file uploads (perf / final) ---------------- */
+function setupMultiUpload(key, statusElId, listElId, summaryUnit){
+  const fileInput = document.getElementById('file_'+key);
+  fileInput.addEventListener('change', function(e){
+    const files = Array.from(e.target.files || []);
+    if(!files.length) return;
+    Promise.all(files.map(function(file){
+      return readFileAsAOA(file).then(function(aoa){
+        // 1) 반별 매트릭스 일람표(교과목별 일람표-전체학급-영역별) 형식 우선 시도
+        const matrixIdx = findMatrixHeaderIndex(aoa);
+        if(matrixIdx>=0){
+          const mat = parseMatrixSheet(aoa, matrixIdx);
+          if(mat.rows.length){
+            return {name:file.name, format:'matrix', classCols:mat.classCols, exam:mat.exam, subject:mat.subject, maxScore:mat.maxScore, rows:mat.rows, headerIdx:matrixIdx, headers:[], mapping:{name:-1,grade:-1,classNo:-1,studentNo:-1,score:-1}};
+          }
+        }
+        // 2) 학생별 1행(성명/번호/원점수 등 열) 형식
+        const headerIdx = findHeaderRowIndex(aoa);
+        const headers = headerIdx>=0 ? (aoa[headerIdx]||[]).map(trimStr) : [];
+        const mapping = headerIdx>=0 ? guessMapping(headers) : {name:-1,grade:-1,classNo:-1,studentNo:-1,score:-1};
+        const rows = headerIdx>=0 ? extractRows(aoa, headerIdx, headers, mapping) : [];
+        return {name:file.name, format:'flat', aoa:aoa, headerIdx:headerIdx, headers:headers, mapping:mapping, rows:rows};
+      }).catch(function(err){
+        return {name:file.name, format:'flat', aoa:[], headerIdx:-1, headers:[], mapping:{name:-1,grade:-1,classNo:-1,studentNo:-1,score:-1}, rows:[], error:err.message};
+      });
+    })).then(function(parsed){
+      state.datasets[key].files = state.datasets[key].files.concat(parsed);
+      renderMultiFileList(key, listElId, summaryUnit);
+      document.getElementById(statusElId).textContent = state.datasets[key].files.length + summaryUnit + ' 업로드됨';
+      document.getElementById(statusElId).className='badge';
+      fileInput.value = '';
+      refreshSection(key);
+    });
+  });
+}
+function renderMultiFileList(key, listElId, summaryUnit){
+  const el = document.getElementById(listElId);
+  const files = state.datasets[key].files;
+  if(!files.length){ el.innerHTML=''; return; }
+  el.innerHTML = files.map(function(f, idx){
+    const uid = key+'_'+idx;
+    if(f.format==='matrix'){
+      const countsByClass = {};
+      f.rows.forEach(function(r){ countsByClass[r.classNo] = (countsByClass[r.classNo]||0)+1; });
+      const classSummary = f.classCols.map(function(c){ return c+'반 '+(countsByClass[c]||0)+'명'; }).join(' · ');
+      const metaLine = [f.exam, f.subject].filter(Boolean).join(' · ');
+      return '<div class="file-item">'
+        + '<div class="row1"><span class="fname">'+f.name+'</span>'
+        + '<span class="badge">'+f.rows.length+'건</span>'
+        + '<button class="map-toggle" data-toggle="'+uid+'">반별 인원 보기</button>'
+        + '<button class="btn-ghost btn-sm" data-remove="'+key+':'+idx+'">제거</button></div>'
+        + '<div class="detail-panel" id="panel_'+uid+'">'
+        + (metaLine ? metaLine+'<br>' : '') + classSummary
+        + '</div>'
+        + '</div>';
+    }
+    const warn = (f.mapping.score<0);
+    const showMap = (key!=='final');
+    return '<div class="file-item">'
+      + '<div class="row1"><span class="fname">'+f.name+'</span>'
+      + '<span class="badge'+(warn?' warn':'')+'">'+f.rows.length+'건'+(warn?' · 점수열 확인 필요':'')+'</span>'
+      + (showMap ? '<button class="map-toggle" data-toggle="'+uid+'">열 매핑 확인/수정</button>' : '')
+      + '<button class="btn-ghost btn-sm" data-remove="'+key+':'+idx+'">제거</button></div>'
+      + (showMap ? '<div class="map-panel'+(warn?' open':'')+'" id="panel_'+uid+'">'+buildMappingPanelHTML(uid, f.headers, f.mapping)+'</div>' : '')
+      + '</div>';
+  }).join('');
+  files.forEach(function(f, idx){
+    const uid = key+'_'+idx;
+    if(f.format==='matrix'){ wireToggle(uid); return; }
+    if(key==='final') return;
+    wireMapPanel(uid, function(field, val){
+      f.mapping[field] = val;
+      f.rows = f.headerIdx>=0 ? extractRows(f.aoa, f.headerIdx, f.headers, f.mapping) : [];
+      renderMultiFileList(key, listElId, summaryUnit);
+      refreshSection(key);
+    });
+    wireToggle(uid);
+  });
+  el.querySelectorAll('[data-remove]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      const parts = btn.getAttribute('data-remove').split(':');
+      const k = parts[0], i = parseInt(parts[1],10);
+      state.datasets[k].files.splice(i,1);
+      renderMultiFileList(k, listElId, summaryUnit);
+      document.getElementById(k==='perf'?'status_perf':'status_final').textContent = state.datasets[k].files.length + summaryUnit + ' 업로드됨';
+      refreshSection(k);
+    });
+  });
+}
+function wireMapPanel(uid, onChange){
+  document.querySelectorAll('select[data-uid="'+uid+'"]').forEach(function(sel){
+    sel.addEventListener('change', function(){
+      onChange(sel.getAttribute('data-field'), parseInt(sel.value,10));
+    });
+  });
+}
+function wireToggle(uid){
+  const btn = document.querySelector('[data-toggle="'+uid+'"]');
+  const panel = document.getElementById('panel_'+uid);
+  if(!btn||!panel) return;
+  btn.addEventListener('click', function(){
+    panel.classList.toggle('open');
+  });
+}
+
+/* ---------------- aggregate score getters ---------------- */
+function getScores(key){
+  if(key==='t1' || key==='t2') return state.datasets[key].scores || [];
+  if(key==='final'){
+    let out = [];
+    state.datasets.final.files.forEach(function(f){ out = out.concat(f.rows.map(function(r){return r.score;})); });
+    return out;
+  }
+  if(key==='perf'){
+    const map = {};
+    state.datasets.perf.files.forEach(function(f){
+      f.rows.forEach(function(r){
+        map[r.key] = (map[r.key]||0) + r.score;
+      });
+    });
+    return Object.values(map);
+  }
+  return [];
+}
+
+/* ---------------- stats / histogram / levels ---------------- */
+function computeStats(scores){
+  if(!scores.length) return null;
+  const max = Math.max.apply(null, scores);
+  const min = Math.min.apply(null, scores);
+  const mean = scores.reduce(function(a,b){return a+b;},0)/scores.length;
+  const variance = scores.reduce(function(a,b){return a+Math.pow(b-mean,2);},0)/scores.length;
+  return {n:scores.length, max:max, min:min, mean:mean, std:Math.sqrt(variance)};
+}
+function computeHistogram(scores, binWidth){
+  const maxScore = scores.length ? Math.max.apply(null, scores) : 0;
+  let upper = Math.ceil(maxScore/binWidth)*binWidth;
+  if(upper<=0) upper = binWidth; // 데이터가 있으면 최소 1구간은 보장
+  if(upper>100) upper = 100; // 원점수는 100점을 넘지 않음
+  const numBins = Math.max(1, Math.round(upper/binWidth));
+  const counts = new Array(numBins).fill(0);
+  scores.forEach(function(s){
+    let idx = Math.floor(s/binWidth);
+    if(idx>=numBins) idx = numBins-1;
+    if(idx<0) idx = 0;
+    counts[idx]++;
+  });
+  const labels = [];
+  for(let i=0;i<numBins;i++){
+    const lo = i*binWidth, hi = Math.min((i+1)*binWidth,upper);
+    labels.push(lo+'~'+hi);
+  }
+  return {labels:labels, counts:counts};
+}
+function computeLevels(scores, cutoffArr, maxScore){
+  const valid = cutoffArr.every(function(c){ return typeof c==='number' && !isNaN(c); });
+  if(!valid) return null;
+  const ab=cutoffArr[0], bc=cutoffArr[1];
+  const ordered = ab>bc;
+  const counts = {A:0,B:0,C:0};
+  scores.forEach(function(s){
+    if(s>=ab) counts.A++;
+    else if(s>=bc) counts.B++;
+    else counts.C++;
+  });
+  const top = (typeof maxScore==='number' && !isNaN(maxScore) && maxScore>0) ? maxScore : 100;
+  const ranges = {
+    A: fmtNum(ab)+'점~'+fmtNum(top)+'점',
+    B: fmtNum(bc)+'점~'+fmtNum(ab)+'점 미만',
+    C: '0점~'+fmtNum(bc)+'점 미만'
+  };
+  return {counts:counts, ranges:ranges, total:scores.length, ordered:ordered};
+}
+function getMaxScoreForKey(key){
+  // 수행평가는 업로드된 영역별 파일들의 '만점' 합계를 실제 만점으로 사용 (예: 20+20=40점).
+  // 정보가 없으면 기본 100점 만점으로 처리.
+  if(key==='perf'){
+    const files = (state.datasets.perf && state.datasets.perf.files) || [];
+    let sum = 0, found = false;
+    files.forEach(function(f){
+      if(f.format==='matrix' && typeof f.maxScore==='number' && !isNaN(f.maxScore)){
+        sum += f.maxScore; found = true;
+      }
+    });
+    return found ? sum : 100;
+  }
+  return 100;
+}
+function getResultData(key){
+  const scores = getScores(key);
+  const stats = computeStats(scores);
+  const bw = state.binWidth[key];
+  const hist = stats ? computeHistogram(scores, bw) : null;
+  const maxScore = getMaxScoreForKey(key);
+  const levels = stats ? computeLevels(scores, state.cutoffs[key], maxScore) : null;
+  return {key:key, scores:scores, stats:stats, hist:hist, levels:levels, binWidth:bw, maxScore:maxScore};
+}
+
+/* ---------------- rendering result sections ---------------- */
+const LEVEL_KEYS = ['A','B','C'];
+function refreshSection(key){
+  const container = document.getElementById('result_'+key);
+  const data = getResultData(key);
+  if(!data.stats){
+    container.innerHTML = '<div class="empty-note">아직 업로드된 자료가 없습니다. 위의 \u201c2. 파일업로드\u201d에서 자료를 올려주세요.</div>';
+    if(charts[key]){ charts[key].destroy(); charts[key]=null; }
+    return;
+  }
+  const s = data.stats;
+  let html = '';
+  html += '<div class="stats-row">'
+    + statBox('최고점', fmtNum(s.max))
+    + statBox('최하점', fmtNum(s.min))
+    + statBox('평균', fmtNum(s.mean))
+    + statBox('표준편차', fmtNum(s.std))
+    + '</div>';
+
+  html += '<div class="hist-wrap">'
+    + '<div class="hist-ctrl"><label>히스토그램 계급폭</label>'
+    + '<input type="number" min="1" max="10" step="1" value="'+data.binWidth+'" id="bw_'+key+'"> 점 단위'
+    + ' &nbsp;<span class="hint" style="margin:0;">총 '+s.n+'명 데이터</span></div>'
+    + '<div class="chart-box"><canvas id="chart_'+key+'"></canvas></div>'
+    + '</div>';
+
+  html += '<div class="subhead" style="margin-top:22px;">성취수준별 분포 분석</div>';
+  if(!data.levels){
+    html += '<div class="warn-box">위 1번 항목에서 이 평가의 A/B, B/C 분할점수를 모두 입력하면 성취수준별 분포가 계산됩니다.</div>';
+  } else if(!data.levels.ordered){
+    html += '<div class="warn-box">분할점수는 A/B &gt; B/C 순으로 내림차순이어야 합니다. 입력값을 확인해주세요.</div>';
+  } else {
+    html += renderLevelsTable(data.levels);
+  }
+  container.innerHTML = html;
+
+  document.getElementById('bw_'+key).addEventListener('input', function(e){
+    let v = parseInt(e.target.value,10);
+    if(isNaN(v)) return;
+    v = Math.max(1, Math.min(10, v));
+    state.binWidth[key] = v;
+    saveDefaults();
+    refreshSection(key);
+  });
+
+  try{
+    renderChart(key, data);
+  }catch(err){
+    const box = document.querySelector('#result_'+key+' .chart-box');
+    if(box) box.innerHTML = '<div class="empty-note">그래프 라이브러리를 불러오지 못해 히스토그램을 표시할 수 없습니다. 인터넷 연결을 확인하고 새로고침해주세요. (다른 분석 결과에는 영향이 없습니다.)</div>';
+  }
+}
+function statBox(lbl, val){
+  return '<div class="stat-box"><div class="lbl">'+lbl+'</div><div class="val">'+val+' <small>점</small></div></div>';
+}
+function renderLevelsTable(levels){
+  let html = '<table class="levels"><thead><tr><th>급간</th>';
+  LEVEL_KEYS.forEach(function(l){ html += '<th class="lv'+l+'">'+l+'</th>'; });
+  html += '<th>합</th></tr></thead><tbody>';
+  html += '<tr><td class="first">점수 범위</td>';
+  LEVEL_KEYS.forEach(function(l){ html += '<td class="rangecell">'+levels.ranges[l]+'</td>'; });
+  html += '<td>-</td></tr>';
+  html += '<tr><td class="first">인원</td>';
+  LEVEL_KEYS.forEach(function(l){ html += '<td>'+levels.counts[l]+'명</td>'; });
+  html += '<td>'+levels.total+'명</td></tr>';
+  html += '<tr><td class="first">비율</td>';
+  LEVEL_KEYS.forEach(function(l){
+    const pct = levels.total ? (levels.counts[l]/levels.total*100) : 0;
+    html += '<td>'+fmtNum(pct,1)+'%</td>';
+  });
+  html += '<td>100%</td></tr>';
+  html += '</tbody></table>';
+  return html;
+}
+function renderChart(key, data){
+  if(typeof Chart==='undefined'){ throw new Error('Chart library not loaded'); }
+  const ctx = document.getElementById('chart_'+key);
+  if(charts[key]) charts[key].destroy();
+  charts[key] = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: data.hist.labels,
+      datasets:[{
+        label:'인원수',
+        data: data.hist.counts,
+        backgroundColor:'#1f6f5c',
+        borderRadius:4,
+        maxBarThickness:34
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{title:function(items){return items[0].label+'점';}}} },
+      scales:{
+        x:{ title:{display:true, text:'점수 구간'}, grid:{display:false} },
+        y:{ beginAtZero:true, ticks:{precision:0}, title:{display:true, text:'인원수(명)'} }
+      }
+    }
+  });
+}
+
+/* ---------------- export: excel (ExcelJS, 서식 있는 보고서) ---------------- */
+function hexToArgb(hex){ return 'FF'+hex.replace('#','').toUpperCase(); }
+const XLC = {
+  ink: hexToArgb('#16233c'),
+  inkSoft: hexToArgb('#5b6680'),
+  accent: hexToArgb('#1f6f5c'),
+  accentDark: hexToArgb('#154e41'),
+  accentSoft: hexToArgb('#e4f2ee'),
+  warn: hexToArgb('#b3441f'),
+  warnSoft: hexToArgb('#fbe9e3'),
+  line: hexToArgb('#dde2ea'),
+  white: 'FFFFFFFF',
+  lvA: hexToArgb('#1f6f5c'), lvB: hexToArgb('#3f8f74'), lvC: hexToArgb('#c9a227'),
+  lvD: hexToArgb('#cf7a3c'), lvE: hexToArgb('#b3441f')
+};
+function xlThinBorder(){
+  const s = {style:'thin', color:{argb:XLC.line}};
+  return {top:s, left:s, bottom:s, right:s};
+}
+function xlTitleBanner(sheet, row, text, span){
+  sheet.mergeCells(row,1,row,span);
+  const cell = sheet.getCell(row,1);
+  cell.value = text;
+  cell.font = {bold:true, size:14, color:{argb:XLC.white}, name:'맑은 고딕'};
+  cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:XLC.ink}};
+  cell.alignment = {vertical:'middle', horizontal:'left', indent:1};
+  sheet.getRow(row).height = 28;
+}
+function xlSubhead(sheet, row, text){
+  const cell = sheet.getCell(row,1);
+  cell.value = text;
+  cell.font = {bold:true, size:12, color:{argb:XLC.ink}};
+}
+function xlWriteStatsBlock(sheet, row, stats){
+  const labels = ['최고점','최하점','평균','표준편차','응시(분석)인원'];
+  const values = stats ? [fmtNum(stats.max), fmtNum(stats.min), fmtNum(stats.mean), fmtNum(stats.std), stats.n+'명'] : ['-','-','-','-','-'];
+  labels.forEach(function(l,i){
+    const hc = sheet.getCell(row, i+1);
+    hc.value = l; hc.font = {bold:true, color:{argb:XLC.white}};
+    hc.fill = {type:'pattern', pattern:'solid', fgColor:{argb:XLC.accent}};
+    hc.alignment = {horizontal:'center', vertical:'middle'}; hc.border = xlThinBorder();
+    const vc = sheet.getCell(row+1, i+1);
+    vc.value = values[i]; vc.alignment = {horizontal:'center', vertical:'middle'}; vc.border = xlThinBorder();
+  });
+  return row+2;
+}
+function xlWriteLevelsBlock(sheet, row, levels){
+  const cols = ['급간','A','B','C','합'];
+  const colColor = {A:XLC.lvA,B:XLC.lvB,C:XLC.lvC};
+  cols.forEach(function(c,i){
+    const cell = sheet.getCell(row, i+1);
+    cell.value = c;
+    cell.font = {bold:true, color:{argb:XLC.white}};
+    cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb: colColor[c] || XLC.ink}};
+    cell.alignment = {horizontal:'center', vertical:'middle'};
+    cell.border = xlThinBorder();
+  });
+  if(!levels || !levels.ordered){
+    sheet.mergeCells(row+1,1,row+1,5);
+    const msgCell = sheet.getCell(row+1,1);
+    msgCell.value = levels ? '분할점수 순서(A/B>B/C)가 올바르지 않습니다.' : '분할점수가 입력되지 않았습니다.';
+    msgCell.font = {italic:true, color:{argb:XLC.warn}};
+    msgCell.alignment = {horizontal:'left', vertical:'middle'};
+    sheet.getRow(row+1).height = 20;
+    return row+3;
+  }
+  const l = levels;
+  const pct = function(c){ return l.total? fmtNum(c/l.total*100,1)+'%':'0%'; };
+  const dataRows = [
+    ['점수범위', l.ranges.A, l.ranges.B, l.ranges.C, '-'],
+    ['인원', l.counts.A+'명', l.counts.B+'명', l.counts.C+'명', l.total+'명'],
+    ['비율', pct(l.counts.A), pct(l.counts.B), pct(l.counts.C), '100%']
+  ];
+  dataRows.forEach(function(rowData, ri){
+    const isRangeRow = (ri===0);
+    rowData.forEach(function(val, ci){
+      const cell = sheet.getCell(row+1+ri, ci+1);
+      cell.value = val;
+      cell.alignment = {horizontal:'center', vertical:'middle', wrapText:isRangeRow};
+      cell.border = xlThinBorder();
+      if(ci===0){ cell.font = {bold:true}; cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:XLC.accentSoft}}; }
+      else if(isRangeRow){ cell.font = {size:9}; }
+    });
+    if(isRangeRow){ sheet.getRow(row+1+ri).height = 28; }
+  });
+  return row+5;
+}
+function xlAddHistogramImage(workbook, sheet, row, key){
+  if(!charts[key]) return row;
+  try{
+    const dataUrl = charts[key].toBase64Image();
+    const imgId = workbook.addImage({base64:dataUrl, extension:'png'});
+    sheet.addImage(imgId, { tl:{col:0, row:row-1}, ext:{width:600, height:270} });
+    return row + 15;
+  }catch(e){ return row; }
+}
+function exportExcel(){
+  if(typeof ExcelJS==='undefined'){ alert('엑셀 내보내기 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해주세요.'); return; }
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = '과목별 성취평가 운영 결과 분석 (3단계)';
+  workbook.created = new Date();
+  const colWidths = [16,13,13,13,13];
+
+  // ---- 시트1: 입력값 ----
+  const s0 = workbook.addWorksheet('입력값', {views:[{showGridLines:false}]});
+  s0.columns = colWidths.map(function(w){ return {width:w}; });
+  let r = 1;
+  xlTitleBanner(s0, r, buildReportTitle(), 5); r+=2;
+  s0.getCell(r,1).value = '생성일: '+new Date().toLocaleString('ko-KR');
+  s0.getCell(r,1).font = {italic:true, color:{argb:XLC.inkSoft}}; r+=2;
+
+  xlSubhead(s0, r, '1. 반영비율, 분할점수 입력'); r+=2;
+  s0.getCell(r,1).value = '가. 반영비율'; s0.getCell(r,1).font = {bold:true}; r+=1;
+  const r1v=document.getElementById('r1').value||'-', r2v=document.getElementById('r2').value||'-', r3v=document.getElementById('r3').value||'-';
+  [['1차 정기시험',r1v],['2차 정기시험',r2v],['수행평가(자동계산)',r3v]].forEach(function(pair){
+    const lc = s0.getCell(r,1); lc.value = pair[0]; lc.font = {bold:true};
+    lc.fill = {type:'pattern', pattern:'solid', fgColor:{argb:XLC.accentSoft}}; lc.border = xlThinBorder();
+    const vc = s0.getCell(r,2); vc.value = pair[1]; vc.alignment = {horizontal:'center'}; vc.border = xlThinBorder();
+    r+=1;
+  });
+  r+=1;
+
+  s0.getCell(r,1).value = '나. 분할점수'; s0.getCell(r,1).font = {bold:true}; r+=1;
+  ['평가','A/B','B/C'].forEach(function(h,i){
+    const c = s0.getCell(r,i+1); c.value = h; c.font = {bold:true, color:{argb:XLC.white}};
+    c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:XLC.ink}}; c.alignment = {horizontal:'center'}; c.border = xlThinBorder();
+  });
+  r+=1;
+  TESTS.forEach(function(t){
+    const c = state.cutoffs[t.key];
+    [t.label, fmtNum(c[0]), fmtNum(c[1])].forEach(function(v,i){
+      const cell = s0.getCell(r,i+1); cell.value = v; cell.border = xlThinBorder();
+      cell.alignment = {horizontal: i===0?'left':'center'};
+      if(i===0){ cell.font = {bold:true}; cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:XLC.accentSoft}}; }
+    });
+    r+=1;
+  });
+
+  // ---- 시트2~5: 평가별 결과 ----
+  const sections = [
+    {key:'t1', name:'1차정기시험', title:'3. 1차 정기시험 결과'},
+    {key:'t2', name:'2차정기시험', title:'4. 2차 정기시험 결과'},
+    {key:'perf', name:'수행평가', title:'5. 수행평가 결과'},
+    {key:'final', name:'학기말', title:'6. 학기말 결과'}
+  ];
+  sections.forEach(function(sec){
+    const data = getResultData(sec.key);
+    const sh = workbook.addWorksheet(sec.name, {views:[{showGridLines:false}]});
+    sh.columns = colWidths.map(function(w){ return {width:w}; });
+    let rr = 1;
+    xlTitleBanner(sh, rr, sec.title, 5); rr+=2;
+    xlSubhead(sh, rr, '가. 평가 결과 개요 및 분포'); rr+=1;
+    rr = xlWriteStatsBlock(sh, rr, data.stats);
+    rr+=1;
+    if(data.stats){
+      rr = xlAddHistogramImage(workbook, sh, rr, sec.key);
+      rr+=1;
+    } else {
+      sh.getCell(rr,1).value = '업로드된 자료가 없습니다.';
+      sh.getCell(rr,1).font = {italic:true, color:{argb:XLC.inkSoft}};
+      rr+=2;
+    }
+    xlSubhead(sh, rr, '나. 성취수준별 분포 분석'); rr+=1;
+    rr = xlWriteLevelsBlock(sh, rr, data.levels);
+  });
+
+  workbook.xlsx.writeBuffer().then(function(buffer){
+    const blob = new Blob([buffer], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    saveAs(blob, buildFileName());
+  }).catch(function(err){
+    alert('엑셀 파일 생성 중 오류가 발생했습니다: '+err.message);
+  });
+}
+
+/* ---------------- init ---------------- */
+function init(){
+  loadDefaults();
+  ['metaYear','metaSemester','metaSubject'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', function(){ saveDefaults(); });
+  });
+  ['r1','r2'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', function(){ updateRatioAuto(); saveDefaults(); });
+  });
+  updateRatioAuto();
+  setupCutoffGrid();
+  Object.assign(state.cutoffs, getCutoffsFromInputs());
+  refreshCutoffStatus();
+
+  setupSingleUpload('t1','status_t1','list_t1');
+  setupSingleUpload('t2','status_t2','list_t2');
+  setupMultiUpload('perf','status_perf','list_perf','개 영역');
+  setupMultiUpload('final','status_final','list_final','개 학급');
+
+  TESTS.forEach(function(t){ refreshSection(t.key); });
+
+  document.getElementById('btnReset').addEventListener('click', function(){
+    if(confirm('저장된 기본값과 입력한 모든 값을 초기화할까요?')) resetDefaults();
+  });
+  document.getElementById('btnExportExcel').addEventListener('click', exportExcel);
+  document.getElementById('btnExportExcel2').addEventListener('click', exportExcel);
+}
+document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+</body>
+</html>
